@@ -1,30 +1,19 @@
 const express = require("express");
 const cors = require("cors");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 require("dotenv").config();
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.PASS
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.post("/contact", async (req, res) => {
-
   try {
 
     const { name, email, subject, message } = req.body;
 
-    // Input validation
     if (!name || !email || !message) {
       return res.status(400).json({ msg: "Name, email, and message are required." });
     }
@@ -38,34 +27,20 @@ app.post("/contact", async (req, res) => {
       return res.status(400).json({ msg: "Input too long." });
     }
 
-    await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: process.env.EMAIL,
+    await resend.emails.send({
+      from: "onboarding@resend.dev",
+      to: "bharathmedapatla@gmail.com",
+      reply_to: email,
       subject: subject ? `[Portfolio] ${subject}` : "[Portfolio] New Message",
-      text: `
-Name: ${name}
-Email: ${email}
-
-Message:
-${message}
-      `,
-      replyTo: email
+      text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
     });
 
-    res.json({
-      msg: "Message sent successfully 🚀"
-    });
+    res.json({ msg: "Message sent successfully 🚀" });
 
   } catch (err) {
-
     console.error("Mail error:", err);
-
-    res.status(500).json({
-      msg: "Failed to send message. Please try again later."
-    });
-
+    res.status(500).json({ msg: "Failed to send message. Please try again later." });
   }
-
 });
 
 const PORT = process.env.PORT || 5000;
